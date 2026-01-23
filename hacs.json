@@ -1,0 +1,6 @@
+{
+  "name": "Maxxisun",
+  "content_in_root": false,
+  "domains": ["maxxisun"],
+  "homeassistant": "2025.9.0"
+}
