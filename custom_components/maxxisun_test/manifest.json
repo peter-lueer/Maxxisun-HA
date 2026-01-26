@@ -1,0 +1,12 @@
+{
+  "domain": "maxxisun",
+  "name": "Maxxisun",
+  "version": "0.1.4",
+  "integration_type": "hub",
+  "config_flow": true,
+  "documentation": "https://github.com/peter-lueer/Maxxisun-HA",
+  "issue_tracker": "https://github.com/peter-lueer/Maxxisun-HA/issues",
+  "requirements": [],
+  "codeowners": ["@peter-lueer"],
+  "iot_class": "cloud_polling"
+}

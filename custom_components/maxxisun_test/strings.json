@@ -1,0 +1,15 @@
+{
+  "title": "Maxxisun Test",
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "email": "E-Mail",
+          "ccu": "CCU",
+          "API_POLL_INTERVAL": "Interval"
+        },
+        "description": "Select your CCU"
+      }
+    }
+  }
+}
