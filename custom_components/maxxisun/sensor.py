@@ -82,6 +82,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity_PowerBattery = DeviceCalcedValueSensor(coordinator, "PowerBattery", "Power Battery", "W", device_id, "mdi:battery-outline", True)
     entities.append(entity_PowerBattery)
 
+    _LOGGER.debug("Create CalcedValueSensor BatteryCapacity")
+    entity_BatteryCapacity = DeviceCalcedValueSensor(coordinator, "BatteryCapacity", "Battery Capacity", "Wh", device_id, "mdi:battery-outline", True)
+    entities.append(entity_BatteryCapacity)
+
     async_add_entities(entities, True)
 
     # Eigenes Intervall erzwingen
@@ -215,6 +219,18 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
     @property
     def native_value(self):
         data = self.coordinator.data or {}
+        if self._key == "BatteryCapacity":
+            array = data.get("batteriesInfo", [])
+            calcCapacity = 0.0
+            try:
+                for index in range(len(array)):
+                    capacity = float(array[index].get("batteryCapacity", 0) or 0)
+                    calcCapacity += capacity
+            except (ValueError, TypeError):
+                calcCapacity += 0.0
+            val = round(calcCapacity)
+            return int(val) if self._force_int else val
+
         try:
             pv = float(data.get("PV_power_total", 0) or 0)
             pccu = float(data.get("Pccu", 0) or 0)
@@ -234,18 +250,30 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
 
     @property
     def icon(self):
-        if self._key != "BatteryCharging" and self._key != "PowerBattery":
-            return self._attr_icon
         data = self.coordinator.data or {}
-        try:
-            pv = float(data.get("PV_power_total", 0) or 0)
-            pccu = float(data.get("Pccu", 0) or 0)
-        except (ValueError, TypeError):
-            pv, pccu = 0.0, 0.0
-        d = round(pv - pccu)
-        if d == 0:
-            return "mdi:battery-outline"
-        return "mdi:battery-arrow-up-outline" if d > 0 else "mdi:battery-arrow-down-outline"
+        if self._key == "BatteryCharging" or self._key == "PowerBattery":
+            try:
+                pv = float(data.get("PV_power_total", 0) or 0)
+                pccu = float(data.get("Pccu", 0) or 0)
+            except (ValueError, TypeError):
+                pv, pccu = 0.0, 0.0
+            d = round(pv - pccu)
+            if d == 0:
+                return "mdi:battery-outline"
+            return "mdi:battery-arrow-up-outline" if d > 0 else "mdi:battery-arrow-down-outline"
+        elif self._key == "BatteryCapacity":
+            try:
+                soc = float(data.get("SOC", 0) or 0)
+            except (ValueError, TypeError):
+                soc = 0.0
+                return "mdi:battery-remove"
+            d = round(soc / 10) * 10
+            if d == 0:
+                return "mdi:battery-outline"
+            elif d == 100:
+                return "mdi:battery"
+            return "mdi:battery-" + str(d)
+        return self._attr_icon
 
     @property
     def extra_state_attributes(self):
