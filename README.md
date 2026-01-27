@@ -1,4 +1,5 @@
-# Maxxisun – Home Assistant Integration
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/dark_logo.png"><source media="(prefers-color-scheme: light)" srcset="images/logo.png"><img alt="Fallback image description" src="images/dark_logo.png"></picture>
+# Home Assistant Integration
 
 [![GitHub Release][releases-shield]][releases]
 [![hacs][hacsbadge]][hacs]
