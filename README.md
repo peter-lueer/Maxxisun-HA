@@ -1,5 +1,4 @@
-<picture><source media="(prefers-color-scheme: dark)" srcset="images/dark_logo.png"><source media="(prefers-color-scheme: light)" srcset="images/logo.png"><img alt="Fallback image description" src="images/dark_logo.png"></picture>
-# Home Assistant Integration
+# ![Maxxisun][maxxisun-ha-logo] Home Assistant Integration
 
 [![GitHub Release][releases-shield]][releases]
 [![hacs][hacsbadge]][hacs]
@@ -13,12 +12,21 @@ A custom integration for [Maxxisun-CCUs]. This implementation focuses on reading
 ---
 
 ## 📦 Installation
-1. Integration über UI hinzufügen: **Einstellungen → Geräte & Dienste → Integration hinzufügen → Maxxisun-HA **
-2. E-Mail und CCU eingeben
+1. Add Repository to "Custom Repositories"
+
+2. Download and Install
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=peter-lueer&repository=Maxxisun-HA)
+
+4. Configure with your E-Mail & CCU
+
+[![Set up a new integration in Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=maxxisun)
+
 
 ---
 [Maxxisun-CCUs]: https://maxxisun.de/
 [maxxisun-ha]: https://github.com/peter-lueer/Maxxisun-HA
+[maxxisun-ha-logo]: https://raw.githubusercontent.com/peter-lueer/Maxxisun-HA/main/images/logo.png
 [commits-shield]: https://img.shields.io/github/commit-activity/y/peter-lueer/Maxxisun-HA
 [commits]: https://github.com/peter-lueer/Maxxisun-HA/commits/main
 [hacs]: https://github.com/hacs/integration
