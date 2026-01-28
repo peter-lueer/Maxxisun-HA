@@ -1,6 +1,5 @@
 import logging
 import aiohttp
-import asyncio
 from datetime import timedelta, datetime
 
 from homeassistant.components.sensor import SensorEntity
@@ -19,9 +18,7 @@ from .const import DOMAIN, API_BASE_URL, SENSOR_MAP
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Set up sensors from config entry using DataUpdateCoordinator."""
     data = hass.data[DOMAIN][entry.entry_id]
     session = async_get_clientsession(hass)
@@ -38,22 +35,16 @@ async def async_setup_entry(
 
     await coordinator.async_config_entry_first_refresh()
 
-    device_id = (
-        coordinator.data.get("deviceId", "unknown") if coordinator.data else "unknown"
-    )
+    device_id = coordinator.data.get("deviceId", "unknown") if coordinator.data else "unknown"
     entities = []
 
     # einfache Werte
     for key, (name, unit, icon, force_int) in SENSOR_MAP.items():
         _LOGGER.debug("Create ValueSensor %s", key)
-        entities.append(
-            DeviceValueSensor(coordinator, key, name, unit, device_id, icon, force_int)
-        )
+        entities.append(DeviceValueSensor(coordinator, key, name, unit, device_id, icon, force_int))
 
     # converter array
-    for i, _ in enumerate(
-        coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1
-    ):
+    for i, _ in enumerate(coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1):
         entities.append(
             DeviceArraySensor(
                 coordinator,
@@ -67,9 +58,7 @@ async def async_setup_entry(
         )
 
     # battery array
-    for i, _ in enumerate(
-        coordinator.data.get("batteriesInfo", []) if coordinator.data else [], start=1
-    ):
+    for i, _ in enumerate(coordinator.data.get("batteriesInfo", []) if coordinator.data else [], start=1):
         entities.append(
             DeviceArraySensor(
                 coordinator,
@@ -139,15 +128,10 @@ class DeviceCoordinator(DataUpdateCoordinator):
         self._session = session
         self._token = token
 
-        _LOGGER.debug(
-            "DataUpdateCoordinator initialized: api_poll_interval=%s", api_poll_interval
-        )
+        _LOGGER.debug("DataUpdateCoordinator initialized: api_poll_interval=%s", api_poll_interval)
 
         super().__init__(
-            hass,
-            _LOGGER,
-            name="Maxxisun Device Coordinator",
-            update_interval=timedelta(seconds=api_poll_interval),
+            hass, _LOGGER, name="Maxxisun Device Coordinator", update_interval=timedelta(seconds=api_poll_interval)
         )
 
     async def _async_update_data(self):
@@ -166,7 +150,7 @@ class DeviceCoordinator(DataUpdateCoordinator):
                     raise UpdateFailed(f"HTTP {resp.status}")
                 data = await resp.json()
                 return data
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             raise UpdateFailed(f"API request error: {err}") from err
 
 
@@ -202,9 +186,7 @@ class BaseDeviceSensor(SensorEntity):
 class DeviceValueSensor(BaseDeviceSensor):
     """Sensor für einfache Werte."""
 
-    def __init__(
-        self, coordinator, key, name, unit, device_id, icon=None, force_int=False
-    ):
+    def __init__(self, coordinator, key, name, unit, device_id, icon=None, force_int=False):
         super().__init__(coordinator, name, key, device_id, unit, icon)
         self._key = key
         self._force_int = force_int
@@ -309,11 +291,7 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
             d = round(pv - pccu)
             if d == 0:
                 return "mdi:battery-outline"
-            return (
-                "mdi:battery-arrow-up-outline"
-                if d > 0
-                else "mdi:battery-arrow-down-outline"
-            )
+            return "mdi:battery-arrow-up-outline" if d > 0 else "mdi:battery-arrow-down-outline"
         elif self._key == "BatteryCapacity":
             try:
                 soc = float(data.get("SOC", 0) or 0)
@@ -351,9 +329,7 @@ class DeviceArraySensor(BaseDeviceSensor):
         unit=None,
         icon=None,
     ):
-        super().__init__(
-            coordinator, name, f"{array_key}_{index}_{value_key}", device_id, unit, icon
-        )
+        super().__init__(coordinator, name, f"{array_key}_{index}_{value_key}", device_id, unit, icon)
         self._array_key = array_key
         self._index = index
         self._value_key = value_key
