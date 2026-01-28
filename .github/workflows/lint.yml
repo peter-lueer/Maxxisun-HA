@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.13'
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
@@ -40,12 +40,12 @@ jobs:
           python-version: '3.13'
       - name: Install test dependencies
         env:
-          ha: "2025.12.0"
-          PIP_CONSTRAINT: "https://raw.githubusercontent.com/home-assistant/core/${ha}/homeassistant/package_constraints.txt"
+          HA_VERSION: "2025.12.0"
+          PIP_CONSTRAINT: https://raw.githubusercontent.com/home-assistant/core/${{ env.HA_VERSION }}/homeassistant/package_constraints.txt
         run: |
           python -m pip install --upgrade pip
           pip install -c ${PIP_CONSTRAINT} \
-            homeassistant==${ha} \
+            homeassistant==${HA_VERSION} \
             pytest pytest-cov pytest-asyncio pytest-homeassistant-custom-component
       - name: Run tests
         if: ${{ hashFiles('tests/**/*.py') != '' }}
