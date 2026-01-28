@@ -19,7 +19,9 @@ from .const import DOMAIN, API_BASE_URL, SENSOR_MAP
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
     """Set up sensors from config entry using DataUpdateCoordinator."""
     data = hass.data[DOMAIN][entry.entry_id]
     session = async_get_clientsession(hass)
@@ -36,16 +38,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     await coordinator.async_config_entry_first_refresh()
 
-    device_id = coordinator.data.get("deviceId", "unknown") if coordinator.data else "unknown"
+    device_id = (
+        coordinator.data.get("deviceId", "unknown") if coordinator.data else "unknown"
+    )
     entities = []
 
     # einfache Werte
     for key, (name, unit, icon, force_int) in SENSOR_MAP.items():
         _LOGGER.debug("Create ValueSensor %s", key)
-        entities.append(DeviceValueSensor(coordinator, key, name, unit, device_id, icon, force_int))
+        entities.append(
+            DeviceValueSensor(coordinator, key, name, unit, device_id, icon, force_int)
+        )
 
     # converter array
-    for i, _ in enumerate(coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1):
+    for i, _ in enumerate(
+        coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1
+    ):
         entities.append(
             DeviceArraySensor(
                 coordinator,
@@ -59,7 +67,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         )
 
     # battery array
-    for i, _ in enumerate(coordinator.data.get("batteriesInfo", []) if coordinator.data else [], start=1):
+    for i, _ in enumerate(
+        coordinator.data.get("batteriesInfo", []) if coordinator.data else [], start=1
+    ):
         entities.append(
             DeviceArraySensor(
                 coordinator,
@@ -75,21 +85,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     # calced Sensors
     _LOGGER.debug("Create CalcedValueSensor BatteryCharging")
-    entity_BatteryCharging = DeviceCalcedValueSensor(coordinator, "BatteryCharging", "Battery Charging", None, device_id, "mdi:battery-outline", False)
+    entity_BatteryCharging = DeviceCalcedValueSensor(
+        coordinator,
+        "BatteryCharging",
+        "Battery Charging",
+        None,
+        device_id,
+        "mdi:battery-outline",
+        False,
+    )
     entities.append(entity_BatteryCharging)
 
     _LOGGER.debug("Create CalcedValueSensor PowerBattery")
-    entity_PowerBattery = DeviceCalcedValueSensor(coordinator, "PowerBattery", "Power Battery", "W", device_id, "mdi:battery-outline", True)
+    entity_PowerBattery = DeviceCalcedValueSensor(
+        coordinator,
+        "PowerBattery",
+        "Power Battery",
+        "W",
+        device_id,
+        "mdi:battery-outline",
+        True,
+    )
     entities.append(entity_PowerBattery)
 
     _LOGGER.debug("Create CalcedValueSensor BatteryCapacity")
-    entity_BatteryCapacity = DeviceCalcedValueSensor(coordinator, "BatteryCapacity", "Battery Capacity", "Wh", device_id, "mdi:battery-outline", True)
+    entity_BatteryCapacity = DeviceCalcedValueSensor(
+        coordinator,
+        "BatteryCapacity",
+        "Battery Capacity",
+        "Wh",
+        device_id,
+        "mdi:battery-outline",
+        True,
+    )
     entities.append(entity_BatteryCapacity)
 
     async_add_entities(entities, True)
 
     # Eigenes Intervall erzwingen
     poll_interval = timedelta(seconds=api_interval)
+
     async def force_refresh(_):
         _LOGGER.debug("Foreced refresh triggered")
         await coordinator.async_request_refresh()
@@ -104,7 +139,9 @@ class DeviceCoordinator(DataUpdateCoordinator):
         self._session = session
         self._token = token
 
-        _LOGGER.debug("DataUpdateCoordinator initialized: api_poll_interval=%s", api_poll_interval)
+        _LOGGER.debug(
+            "DataUpdateCoordinator initialized: api_poll_interval=%s", api_poll_interval
+        )
 
         super().__init__(
             hass,
@@ -117,8 +154,8 @@ class DeviceCoordinator(DataUpdateCoordinator):
         """Ruft periodisch Daten von der REST-API ab."""
         _LOGGER.debug("Requesting data from Maxxisun API")
         headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0',
-            'Accept': 'application/json, text/plain, */*',
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+            "Accept": "application/json, text/plain, */*",
             "Authorization": f"Bearer {self._token}",
         }
         url = f"{API_BASE_URL}/api/device/last"
@@ -165,7 +202,9 @@ class BaseDeviceSensor(SensorEntity):
 class DeviceValueSensor(BaseDeviceSensor):
     """Sensor für einfache Werte."""
 
-    def __init__(self, coordinator, key, name, unit, device_id, icon=None, force_int=False):
+    def __init__(
+        self, coordinator, key, name, unit, device_id, icon=None, force_int=False
+    ):
         super().__init__(coordinator, name, key, device_id, unit, icon)
         self._key = key
         self._force_int = force_int
@@ -208,10 +247,20 @@ class DeviceValueSensor(BaseDeviceSensor):
             return {"last_update": datetime.fromtimestamp(ts / 1000).isoformat()}
         return {}
 
+
 class DeviceCalcedValueSensor(BaseDeviceSensor):
     """Sensor für einfache Werte."""
 
-    def __init__(self, coordinator, key, name, unit, device_id, icon=None, force_int=True, ):
+    def __init__(
+        self,
+        coordinator,
+        key,
+        name,
+        unit,
+        device_id,
+        icon=None,
+        force_int=True,
+    ):
         super().__init__(coordinator, name, key, device_id, unit, icon)
         self._key = key
         self._force_int = force_int
@@ -260,7 +309,11 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
             d = round(pv - pccu)
             if d == 0:
                 return "mdi:battery-outline"
-            return "mdi:battery-arrow-up-outline" if d > 0 else "mdi:battery-arrow-down-outline"
+            return (
+                "mdi:battery-arrow-up-outline"
+                if d > 0
+                else "mdi:battery-arrow-down-outline"
+            )
         elif self._key == "BatteryCapacity":
             try:
                 soc = float(data.get("SOC", 0) or 0)
@@ -287,8 +340,20 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
 class DeviceArraySensor(BaseDeviceSensor):
     """Sensor für Werte in Arrays (Converter / Battery)."""
 
-    def __init__(self, coordinator, name, array_key, index, value_key, device_id, unit=None, icon=None):
-        super().__init__(coordinator, name, f"{array_key}_{index}_{value_key}", device_id, unit, icon)
+    def __init__(
+        self,
+        coordinator,
+        name,
+        array_key,
+        index,
+        value_key,
+        device_id,
+        unit=None,
+        icon=None,
+    ):
+        super().__init__(
+            coordinator, name, f"{array_key}_{index}_{value_key}", device_id, unit, icon
+        )
         self._array_key = array_key
         self._index = index
         self._value_key = value_key
