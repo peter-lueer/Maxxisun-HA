@@ -32,11 +32,7 @@ class RestConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 async with session.post(
                     login_url,
-                    data='{"email":"'
-                    + user_input["email"]
-                    + '","ccu":"'
-                    + user_input["ccu"]
-                    + '"}',
+                    data='{"email":"' + user_input["email"] + '","ccu":"' + user_input["ccu"] + '"}',
                     headers=headers,
                 ) as resp:
                     if resp.status not in (200, 202):
