@@ -3,7 +3,7 @@ target-version = "py312"
 
 [lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = []
+ignore = ["I001"]
 
 [lint.isort]
 known-first-party = ["custom_components"]

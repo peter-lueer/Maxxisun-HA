@@ -25,7 +25,7 @@ jobs:
       - name: Ruff (format check)
         run: ruff format --check .
       - name: Ruff (lint)
-        run: ruff check . --output-format=github --ignore=I001
+        run: ruff check . --output-format=github
 
   tests:
     name: Pytest
@@ -52,3 +52,4 @@ jobs:
       - name: No tests found
         if: ${{ hashFiles('tests/**/*.py') == '' }}
         run: echo "No tests found. Skipping pytest."
+
