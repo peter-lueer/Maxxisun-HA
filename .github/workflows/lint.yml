@@ -31,25 +31,29 @@ jobs:
     name: Pytest
     runs-on: ubuntu-latest
     needs: [lint]
+    strategy:
+      matrix:
+        include:
+          - python: "3.12"
+            ha: "2025.6.0"
+          - python: "3.13"
+            ha: "2025.12.0"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
       - name: Install test dependencies
         env:
-          PIP_CONSTRAINT: https://raw.githubusercontent.com/home-assistant/core/dev/homeassistant/package_constraints.txt
+          PIP_CONSTRAINT: https://raw.githubusercontent.com/home-assistant/core/${{ matrix.ha }}/homeassistant/package_constraints.txt
         run: |
           python -m pip install --upgrade pip
           pip install -c ${PIP_CONSTRAINT} \
+            homeassistant==${{ matrix.ha }} \
             pytest pytest-cov pytest-asyncio pytest-homeassistant-custom-component
       - name: Run tests
         if: ${{ hashFiles('tests/**/*.py') != '' }}
-        run: |
-          pytest -q --cov=custom_components.maxxisun --cov-report=xml
+        run: pytest -q --cov=custom_components.maxxisun --cov-report=xml
       - name: No tests found
         if: ${{ hashFiles('tests/**/*.py') == '' }}
         run: echo "No tests found. Skipping pytest."
-
