@@ -1,0 +1,13 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = []
+
+[lint.isort]
+known-first-party = ["custom_components"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
