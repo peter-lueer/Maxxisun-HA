@@ -5,8 +5,8 @@
   "config_flow": true,
   "documentation": "https://github.com/peter-lueer/Maxxisun-HA",
   "integration_type": "hub",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/peter-lueer/Maxxisun-HA/issues",
   "requirements": [],
-  "iot_class": "cloud_polling",
   "version": "0.1.5"
 }
