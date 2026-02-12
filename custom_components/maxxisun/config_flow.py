@@ -9,8 +9,9 @@ DATA_SCHEMA = vol.Schema(
         vol.Required("email"): str,
         vol.Required("ccu"): str,
         vol.Required("API_POLL_INTERVAL", default=DEFAULT_POLL_INTERVAL): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=600)
+            vol.Coerce(int), vol.Range(min=5, max=600)
         ),
+        vol.Required("ignoreSSL"): bool,
     }
 )
 
@@ -30,10 +31,12 @@ class RestConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
 
             try:
+                ssL = False if user_input["ignoreSSL"] else None
                 async with session.post(
                     login_url,
                     data='{"email":"' + user_input["email"] + '","ccu":"' + user_input["ccu"] + '"}',
                     headers=headers,
+                    ssl=ssL,
                 ) as resp:
                     if resp.status not in (200, 202):
                         return self.async_show_form(
@@ -63,6 +66,7 @@ class RestConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "ccu": user_input["ccu"],
                     "API_POLL_INTERVAL": user_input["API_POLL_INTERVAL"],
                     "token": token,
+                    "ignoreSSL": user_input["ignoreSSL"],
                 },
             )
 

@@ -1,19 +1,24 @@
 import logging
-import aiohttp
 from datetime import timedelta, datetime
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.entity import (
+    DeviceInfo, 
+    EntityCategory
+)
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, API_BASE_URL, SENSOR_MAP
+
+from .const import CONTROL_DIAGNOSTIC_MAP, DOMAIN, SENSOR_MAP
+from .coordinator import APICoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,12 +31,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     _LOGGER.info("Coordinator init with Interval %s seconds", api_interval)
 
-    coordinator = DeviceCoordinator(
-        hass=hass,
-        session=session,
-        token=data["token"],
-        api_poll_interval=api_interval,
-    )
+    coordinator = hass.data[DOMAIN][entry.entry_id].get("coordinator")
+    if not coordinator:
+        coordinator = APICoordinator(
+            hass=hass,
+            session=session,
+            token=data["token"],
+            api_poll_interval=api_interval,
+            ignoreSSL=data["ignoreSSL"],
+        )
+        hass.data[DOMAIN][entry.entry_id]["coordinator"] = coordinator
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -39,21 +48,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities = []
 
     # einfache Werte
-    for key, (name, unit, icon, force_int) in SENSOR_MAP.items():
+    for key, (translation_key, unit, icon, force_int, stateClass, deviceClass) in SENSOR_MAP.items():
         _LOGGER.debug("Create ValueSensor %s", key)
-        entities.append(DeviceValueSensor(coordinator, key, name, unit, device_id, icon, force_int))
+        entities.append(DeviceValueSensor(coordinator, key, translation_key, unit, device_id, icon, force_int, stateClass, deviceClass))
 
     # converter array
     for i, _ in enumerate(coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1):
         entities.append(
             DeviceArraySensor(
                 coordinator,
-                f"Converter {i} Version",
+                "converter_version",
                 "convertersInfo",
                 i - 1,
                 "version",
                 device_id,
                 icon="mdi:information-outline",
+                translation_placeholders={"index": str(i)},
             )
         )
 
@@ -62,13 +72,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         entities.append(
             DeviceArraySensor(
                 coordinator,
-                f"Battery {i} Capacity",
+                "battery_capacity",
                 "batteriesInfo",
                 i - 1,
                 "batteryCapacity",
                 device_id,
                 unit="Wh",
                 icon="mdi:battery",
+                translation_placeholders={"index": str(i)},
             )
         )
 
@@ -77,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity_BatteryCharging = DeviceCalcedValueSensor(
         coordinator,
         "BatteryCharging",
-        "Battery Charging",
+        "battery_charging",
         None,
         device_id,
         "mdi:battery-outline",
@@ -89,11 +100,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity_PowerBattery = DeviceCalcedValueSensor(
         coordinator,
         "PowerBattery",
-        "Power Battery",
+        "power_battery",
         "W",
         device_id,
         "mdi:battery-outline",
         True,
+        SensorStateClass.MEASUREMENT,
+        SensorDeviceClass.POWER
     )
     entities.append(entity_PowerBattery)
 
@@ -101,13 +114,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entity_BatteryCapacity = DeviceCalcedValueSensor(
         coordinator,
         "BatteryCapacity",
-        "Battery Capacity",
+        "battery_capacity_total",
         "Wh",
         device_id,
         "mdi:battery-outline",
         True,
     )
     entities.append(entity_BatteryCapacity)
+
+    # diagnostic config sensors
+    for field, (translation_key, unit, icon, _is_writable) in CONTROL_DIAGNOSTIC_MAP.items():
+        _LOGGER.debug("Create DiagnosticSensor %s", field)
+        entities.append(
+            DeviceConfigDiagnosticSensor(
+                coordinator,
+                translation_key,
+                field,
+                device_id,
+                unit=unit,
+                icon=icon,
+            )
+        )
 
     async_add_entities(entities, True)
 
@@ -121,51 +148,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     async_track_time_interval(hass, force_refresh, poll_interval)
 
 
-class DeviceCoordinator(DataUpdateCoordinator):
-    """Koordiniert periodisches Abrufen der API-Daten (zentrales Polling)."""
-
-    def __init__(self, hass, session, token, api_poll_interval: int):
-        self._session = session
-        self._token = token
-
-        _LOGGER.debug("DataUpdateCoordinator initialized: api_poll_interval=%s", api_poll_interval)
-
-        super().__init__(
-            hass, _LOGGER, name="Maxxisun Device Coordinator", update_interval=timedelta(seconds=api_poll_interval)
-        )
-
-    async def _async_update_data(self):
-        """Ruft periodisch Daten von der REST-API ab."""
-        _LOGGER.debug("Requesting data from Maxxisun API")
-        headers = {
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-            "Accept": "application/json, text/plain, */*",
-            "Authorization": f"Bearer {self._token}",
-        }
-        url = f"{API_BASE_URL}/api/device/last"
-
-        try:
-            async with self._session.get(url, headers=headers) as resp:
-                if resp.status not in (200, 202):
-                    raise UpdateFailed(f"HTTP {resp.status}")
-                data = await resp.json()
-                return data
-        except (aiohttp.ClientError, TimeoutError) as err:
-            raise UpdateFailed(f"API request error: {err}") from err
 
 
 class BaseDeviceSensor(SensorEntity):
     """Basisklasse mit Device-Zuordnung."""
 
-    def __init__(self, coordinator, name, unique_id, device_id, unit=None, icon=None):
+    def __init__(
+        self,
+        coordinator,
+        translation_key,
+        unique_id,
+        device_id,
+        unit=None,
+        icon=None,
+        stateClass=None,
+        deviceClass=None,
+        name=None,
+        translation_placeholders=None,
+    ):
         self.coordinator = coordinator
-        self._attr_name = name
+        if name is not None:
+            self._attr_name = name
+        if translation_key is not None:
+            self._attr_translation_key = translation_key
+        if translation_placeholders is not None:
+            self._attr_translation_placeholders = translation_placeholders
         self._attr_unique_id = f"{device_id}_{unique_id}"
         self._attr_has_entity_name = True
         self._attr_suggested_object_id = f"{device_id}_{unique_id}".lower()
         self._attr_native_unit_of_measurement = unit
         self._attr_icon = icon
         self._device_id = device_id
+        if deviceClass is not None:
+            self._attr_device_class = deviceClass
+        if stateClass is not None:
+            self._attr_state_class = stateClass
         self._state = None
 
     @property
@@ -186,8 +203,19 @@ class BaseDeviceSensor(SensorEntity):
 class DeviceValueSensor(BaseDeviceSensor):
     """Sensor für einfache Werte."""
 
-    def __init__(self, coordinator, key, name, unit, device_id, icon=None, force_int=False):
-        super().__init__(coordinator, name, key, device_id, unit, icon)
+    def __init__(
+        self,
+        coordinator,
+        key,
+        translation_key,
+        unit,
+        device_id,
+        icon=None,
+        force_int=False,
+        stateClass=None,
+        deviceClass=None,
+    ):
+        super().__init__(coordinator, translation_key, key, device_id, unit, icon, stateClass, deviceClass)
         self._key = key
         self._force_int = force_int
 
@@ -237,13 +265,15 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
         self,
         coordinator,
         key,
-        name,
+        translation_key,
         unit,
         device_id,
         icon=None,
         force_int=True,
+        stateClass=None,
+        deviceClass=None
     ):
-        super().__init__(coordinator, name, key, device_id, unit, icon)
+        super().__init__(coordinator, translation_key, key, device_id, unit, icon, stateClass, deviceClass)
         self._key = key
         self._force_int = force_int
 
@@ -321,15 +351,24 @@ class DeviceArraySensor(BaseDeviceSensor):
     def __init__(
         self,
         coordinator,
-        name,
+        translation_key,
         array_key,
         index,
         value_key,
         device_id,
         unit=None,
         icon=None,
+        translation_placeholders=None,
     ):
-        super().__init__(coordinator, name, f"{array_key}_{index}_{value_key}", device_id, unit, icon)
+        super().__init__(
+            coordinator,
+            translation_key,
+            f"{array_key}_{index}_{value_key}",
+            device_id,
+            unit,
+            icon,
+            translation_placeholders=translation_placeholders,
+        )
         self._array_key = array_key
         self._index = index
         self._value_key = value_key
@@ -367,3 +406,51 @@ class DeviceArraySensor(BaseDeviceSensor):
         if ts:
             return {"last_update": datetime.fromtimestamp(ts / 1000).isoformat()}
         return {}
+
+
+class DeviceConfigDiagnosticSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor bound to a config field from CONTROL_DIAGNOSTIC_MAP."""
+
+    def __init__(
+        self,
+        coordinator: APICoordinator,
+        translation_key: str,
+        field: str,
+        device_id: str,
+        unit=None,
+        icon=None,
+    ):
+        super().__init__(coordinator)
+        self._attr_translation_key = translation_key
+        self._field = field
+        self._device_id = device_id
+        self._attr_unique_id = f"{device_id}_{field}"
+        self._attr_suggested_object_id = f"{device_id}_{field}".lower()
+        self._attr_has_entity_name = True
+        self._attr_native_unit_of_measurement = unit
+        self._attr_icon = icon
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._device_id)},
+            name=f"{self._device_id}",
+            manufacturer="Maxxisun",
+            model=f"{self._device_id}".upper(),
+        )
+
+    @property
+    def native_value(self):
+        cfg = self.coordinator.config or {}
+        if isinstance(cfg, dict) and "data" in cfg and isinstance(cfg["data"], dict):
+            cfg = cfg["data"]
+
+        if not isinstance(cfg, dict):
+            return None
+
+        value = cfg.get(self._field)
+        # Backward/alternate key naming
+        if value is None and self._field == "meterIp":
+            value = cfg.get("meterIP")
+        return value
