@@ -2,7 +2,6 @@ import logging
 from datetime import timedelta
 
 import aiohttp
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import API_BASE_URL, CONTROL_NUMBER_MAP, CONTROL_SELECT_MAP, CONTROL_DIAGNOSTIC_MAP
@@ -39,7 +38,7 @@ class APICoordinator(DataUpdateCoordinator):
             "Accept": "application/json, text/plain, */*",
             "Authorization": f"Bearer {self._token}",
         }
-        
+
         try:
             # Fetch device telemetry
             url_device = f"{API_BASE_URL}/api/device/last"
@@ -48,7 +47,7 @@ class APICoordinator(DataUpdateCoordinator):
                     raise UpdateFailed(f"HTTP {resp.status}")
                 data = await resp.json()
                 self._device_id = data.get("deviceId", self._device_id)
-            
+
             # Fetch device config (for number entities)
             url_config = f"{API_BASE_URL}/api/device/config"
             async with self._session.get(url_config, headers=headers, ssl=self._ssl) as resp:
@@ -56,7 +55,7 @@ class APICoordinator(DataUpdateCoordinator):
                     _LOGGER.warning("Config fetch failed with status %s", resp.status)
                 else:
                     self.config = await self._normalize_config_response(resp)
-            
+
             return data
         except (aiohttp.ClientError, TimeoutError) as err:
             raise UpdateFailed(f"API request error: {err}") from err
@@ -74,7 +73,9 @@ class APICoordinator(DataUpdateCoordinator):
         await self._ensure_config(headers)
 
         # Build payload with all known control fields and the updated value
-        control_keys = set(CONTROL_NUMBER_MAP.keys()) | set(CONTROL_SELECT_MAP.keys()) | set(CONTROL_DIAGNOSTIC_MAP.keys())
+        control_keys = (
+            set(CONTROL_NUMBER_MAP.keys()) | set(CONTROL_SELECT_MAP.keys()) | set(CONTROL_DIAGNOSTIC_MAP.keys())
+        )
         current = self.config or {}
         if isinstance(current, dict) and "data" in current and isinstance(current.get("data"), dict):
             current = current["data"]

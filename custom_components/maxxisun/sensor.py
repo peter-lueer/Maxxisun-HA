@@ -7,10 +7,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import (
-    DeviceInfo, 
-    EntityCategory
-)
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -50,7 +47,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     # einfache Werte
     for key, (translation_key, unit, icon, force_int, stateClass, deviceClass) in SENSOR_MAP.items():
         _LOGGER.debug("Create ValueSensor %s", key)
-        entities.append(DeviceValueSensor(coordinator, key, translation_key, unit, device_id, icon, force_int, stateClass, deviceClass))
+        entities.append(
+            DeviceValueSensor(
+                coordinator, key, translation_key, unit, device_id, icon, force_int, stateClass, deviceClass
+            )
+        )
 
     # converter array
     for i, _ in enumerate(coordinator.data.get("convertersInfo", []) if coordinator.data else [], start=1):
@@ -106,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         "mdi:battery-outline",
         True,
         SensorStateClass.MEASUREMENT,
-        SensorDeviceClass.POWER
+        SensorDeviceClass.POWER,
     )
     entities.append(entity_PowerBattery)
 
@@ -146,8 +147,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         await coordinator.async_request_refresh()
 
     async_track_time_interval(hass, force_refresh, poll_interval)
-
-
 
 
 class BaseDeviceSensor(SensorEntity):
@@ -271,7 +270,7 @@ class DeviceCalcedValueSensor(BaseDeviceSensor):
         icon=None,
         force_int=True,
         stateClass=None,
-        deviceClass=None
+        deviceClass=None,
     ):
         super().__init__(coordinator, translation_key, key, device_id, unit, icon, stateClass, deviceClass)
         self._key = key

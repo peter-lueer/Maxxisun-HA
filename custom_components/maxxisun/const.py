@@ -15,9 +15,30 @@ LANG_DE: Final = "de"
 SENSOR_MAP = {
     "SOC": ("state_of_charge", "%", "mdi:battery", False, None, None),
     "wifiStrength": ("wifi_strength", "dBm", "mdi:wifi", False, None, None),
-    "Pccu": ("power_out", "W", "mdi:power-plug-battery-outline", True, SensorStateClass.MEASUREMENT, SensorDeviceClass.POWER),
-    "Pr": ("power_from_grid", "W", "mdi:transmission-tower-export", True, SensorStateClass.MEASUREMENT, SensorDeviceClass.POWER),
-    "PV_power_total": ("pv_power_total", "W", "mdi:solar-power-variant", False, SensorStateClass.MEASUREMENT, SensorDeviceClass.POWER),
+    "Pccu": (
+        "power_out",
+        "W",
+        "mdi:power-plug-battery-outline",
+        True,
+        SensorStateClass.MEASUREMENT,
+        SensorDeviceClass.POWER,
+    ),
+    "Pr": (
+        "power_from_grid",
+        "W",
+        "mdi:transmission-tower-export",
+        True,
+        SensorStateClass.MEASUREMENT,
+        SensorDeviceClass.POWER,
+    ),
+    "PV_power_total": (
+        "pv_power_total",
+        "W",
+        "mdi:solar-power-variant",
+        False,
+        SensorStateClass.MEASUREMENT,
+        SensorDeviceClass.POWER,
+    ),
     "firmwareVersion": ("firmware_version", None, "mdi:information-outline", False, None, None),
 }
 CONTROL_NUMBER_MAP = {
