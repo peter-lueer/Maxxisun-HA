@@ -60,7 +60,7 @@ CONTROL_SELECT_MAP = {
             {"Key": "none", "Value": 99},
             {"Key": "poweropti", "Value": 1},
             {"Key": "ecotracker", "Value": 4},
-            {"Key": "shelly_3em", "Value": 9},
+            {"Key": "shelly_3em", "Value": 8},
             {"Key": "shelly_3em_pro", "Value": 9},
         ],
     ),
